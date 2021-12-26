@@ -39,6 +39,14 @@ public class TextRecognitionProcessorPlugin extends FrameProcessorPlugin {
 
         return rectObject;
     }
+
+    public String getRectPath(Rect rect) {
+//        rect.left = rect.left / 2;
+//        rect.right = rect.right / 2;
+//        rect.top = rect.top / 2;
+//        rect.bottom = rect.bottom / 2;
+        return "M" + rect.left + " " + rect.top + " L" + rect.right + " " + rect.top + " L" + rect.right + " " + rect.bottom + " L" + rect.left + " " + rect.bottom + " Z";
+    }
     @Override
     public Object callback(ImageProxy imageProxy, Object[] params) {
 
@@ -48,8 +56,17 @@ public class TextRecognitionProcessorPlugin extends FrameProcessorPlugin {
                 InputImage.fromMediaImage(mediaImage, imageProxy.getImageInfo().getRotationDegrees());
 
             WritableMap response = Arguments.createMap();
-            response.putInt("width", image.getWidth());
-            response.putInt("height", image.getHeight());
+            if (image.getRotationDegrees() == 90 || image.getRotationDegrees() == 270) {
+                response.putInt("height", image.getWidth());
+                response.putInt("width", image.getHeight());
+            } else {
+                response.putInt("width", image.getWidth());
+                response.putInt("height", image.getHeight());
+            }
+            response.putInt("rotation", image.getRotationDegrees());
+
+
+//            String pathString = "";
 
             TextRecognizer recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
 
@@ -71,6 +88,8 @@ public class TextRecognitionProcessorPlugin extends FrameProcessorPlugin {
                     blockObject.putString("text", block.getText());
                     blockObject.putMap("rect", getRectMap(block.getBoundingBox()));
 
+//                    pathString = getRectPath(block.getBoundingBox());
+
                     WritableArray lines = Arguments.createArray();
                     for (Text.Line line : block.getLines()) {
                         WritableMap lineObject = Arguments.createMap();
@@ -82,6 +101,7 @@ public class TextRecognitionProcessorPlugin extends FrameProcessorPlugin {
                     blocks.pushMap(blockObject);
                 }
                 response.putArray("blocks", blocks);
+//                return pathString;
                 return response;
 
             } catch (ExecutionException e) {
