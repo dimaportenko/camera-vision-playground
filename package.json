@@ -10,14 +10,17 @@
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx"
   },
   "dependencies": {
+    "@react-native-community/blur": "^3.6.0",
     "@react-navigation/native": "^6.0.6",
     "@react-navigation/native-stack": "^6.2.5",
     "@shopify/react-native-skia": "https://github.com/Shopify/react-native-skia/releases/download/v0.1.50-alpha/shopify-react-native-skia-0.1.50.tgz",
     "react": "17.0.2",
     "react-native": "0.66.4",
+    "react-native-gesture-handler": "^2.1.0",
     "react-native-reanimated": "^2.3.1",
     "react-native-safe-area-context": "^3.3.2",
     "react-native-screens": "^3.10.1",
+    "react-native-static-safe-area-insets": "^2.1.1",
     "react-native-vision-camera": "^2.10.0"
   },
   "devDependencies": {

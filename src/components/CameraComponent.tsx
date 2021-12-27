@@ -1,8 +1,9 @@
 /**
  * Created by Dima Portenko on 22.12.2021
  */
-import React, {useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {
+  BackHandler,
   LayoutRectangle,
   StyleSheet,
   useWindowDimensions,
@@ -10,8 +11,10 @@ import {
 } from 'react-native';
 import {
   Camera,
+  PhotoFile,
   useCameraDevices,
   useFrameProcessor,
+  VideoFile,
 } from 'react-native-vision-camera';
 import {Canvas, Path} from '@shopify/react-native-skia';
 import Reanimated, {runOnJS, useSharedValue} from 'react-native-reanimated';
@@ -21,6 +24,14 @@ import {
   textRecognition,
 } from '../frame-processors/TextRecognitionPlugin';
 import {ResponseRenderer} from './ResponseRenderer';
+import {CaptureButton} from './views/CaptureButton';
+import {
+  CONTENT_SPACING,
+  MAX_ZOOM_FACTOR,
+  SAFE_AREA_PADDING,
+} from '../utils/Constants';
+import {StatusBarBlurBackground} from './views/StatusBarBlurBackground';
+import {useFocusEffect} from '@react-navigation/native';
 
 interface CameraComponentProps {}
 
@@ -29,8 +40,12 @@ Reanimated.addWhitelistedNativeProps({
   zoom: true,
 });
 
+const BUTTON_SIZE = 40;
+
 export const CameraComponent = (props: CameraComponentProps) => {
-  const [isActive, setIsActive] = useState(true);
+  const camera = useRef<Camera>(null);
+  const [isCameraInitialized, setIsCameraInitialized] = useState(false);
+  const [imageUri, setImageUri] = useState<string>('');
 
   const [layout, setLayout] = useState<LayoutRectangle | undefined>(undefined);
   const [resposneLayout, setResponseLayout] = useState<
@@ -47,6 +62,39 @@ export const CameraComponent = (props: CameraComponentProps) => {
   );
   const devices = useCameraDevices();
   const device = devices[cameraPosition];
+
+  const isPressingButton = useSharedValue(false);
+
+  const isActive = !imageUri;
+
+  const zoom = useSharedValue(0);
+  const minZoom = device?.minZoom ?? 1;
+  const maxZoom = Math.min(device?.maxZoom ?? 1, MAX_ZOOM_FACTOR);
+
+  const setIsPressingButton = useCallback(
+    (_isPressingButton: boolean) => {
+      isPressingButton.value = _isPressingButton;
+    },
+    [isPressingButton],
+  );
+
+  useFocusEffect(
+    React.useCallback(() => {
+      const onBackPress = () => {
+        if (imageUri) {
+          setImageUri('');
+          return true;
+        } else {
+          return false;
+        }
+      };
+
+      BackHandler.addEventListener('hardwareBackPress', onBackPress);
+
+      return () =>
+        BackHandler.removeEventListener('hardwareBackPress', onBackPress);
+    }, [imageUri, setImageUri]),
+  );
 
   useEffect(() => {
     if (response && layout) {
@@ -70,6 +118,25 @@ export const CameraComponent = (props: CameraComponentProps) => {
     }
   }, [response, layout]);
 
+  const onMediaCaptured = useCallback(
+    (media: PhotoFile | VideoFile, type: 'photo' | 'video') => {
+      console.log(`Media captured! ${JSON.stringify(media)}`);
+      // navigation.navigate('MediaPage', {
+      //   path: media.path,
+      //   type: type,
+      // });
+      if (type === 'photo') {
+        setImageUri(media.path);
+      }
+    },
+    [],
+  );
+
+  const onInitialized = useCallback(() => {
+    console.log('Camera initialized!');
+    setIsCameraInitialized(true);
+  }, []);
+
   // useEffect(() => {
   //   if (response && layout && resposneLayout) {
   //     console.log(response.width, response.height)
@@ -88,7 +155,7 @@ export const CameraComponent = (props: CameraComponentProps) => {
   }, []);
 
   return (
-    <>
+    <View style={styles.container}>
       {!!device && (
         <View
           style={StyleSheet.absoluteFill}
@@ -97,7 +164,7 @@ export const CameraComponent = (props: CameraComponentProps) => {
             console.log('event.nativeEvent.layout', event.nativeEvent.layout);
           }}>
           <ReanimatedCamera
-            // ref={camera}
+            ref={camera}
             style={StyleSheet.absoluteFill}
             device={device}
             // format={format}
@@ -105,7 +172,7 @@ export const CameraComponent = (props: CameraComponentProps) => {
             // hdr={enableHdr}
             // lowLightBoost={device.supportsLowLightBoost && enableNightMode}
             isActive={isActive}
-            // onInitialized={onInitialized}
+            onInitialized={onInitialized}
             // onError={onError}
             enableZoomGesture={false}
             // animatedProps={cameraAnimatedProps}
@@ -139,6 +206,53 @@ export const CameraComponent = (props: CameraComponentProps) => {
           )}
         </View>
       )}
-    </>
+
+      <CaptureButton
+        style={styles.captureButton}
+        camera={camera}
+        onMediaCaptured={onMediaCaptured}
+        cameraZoom={zoom}
+        minZoom={minZoom}
+        maxZoom={maxZoom}
+        // flash={supportsFlash ? flash : 'off'}
+        flash={'off'}
+        enabled={isCameraInitialized && isActive}
+        setIsPressingButton={setIsPressingButton}
+      />
+
+      {/*<StatusBarBlurBackground />*/}
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: 'black',
+  },
+  captureButton: {
+    position: 'absolute',
+    alignSelf: 'center',
+    bottom: SAFE_AREA_PADDING.paddingBottom,
+  },
+  button: {
+    marginBottom: CONTENT_SPACING,
+    width: BUTTON_SIZE,
+    height: BUTTON_SIZE,
+    borderRadius: BUTTON_SIZE / 2,
+    backgroundColor: 'rgba(140, 140, 140, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  rightButtonRow: {
+    position: 'absolute',
+    right: SAFE_AREA_PADDING.paddingRight,
+    top: SAFE_AREA_PADDING.paddingTop,
+  },
+  text: {
+    color: 'white',
+    fontSize: 11,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+});
