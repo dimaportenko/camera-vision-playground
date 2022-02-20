@@ -150,6 +150,10 @@ export const CameraComponent = (props: CameraComponentProps) => {
     const ocrResponse = textRecognition(frame);
     // console.log(`Return Values: ${JSON.stringify(ocrResponse)}`);
     if (ocrResponse?.blocks?.length > 0) {
+      ocrResponse.blocks = ocrResponse?.blocks.map(block => {
+        block.lines = block.lines.filter(line => /\d/.test(line.text));
+        return block;
+      });
       runOnJS(setResponse)(ocrResponse);
     }
   }, []);
