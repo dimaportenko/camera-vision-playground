@@ -17,6 +17,8 @@ target 'CameraVision' do
     # Pods for testing
   end
 
+  pod 'GoogleMLKit/TextRecognition','2.2.0'
+
   # Enables Flipper.
   #
   # Note that if you have use_frameworks! enabled, Flipper will not work and
